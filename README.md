@@ -29,15 +29,21 @@
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Architecture
 
-Pollflow utilizes a hybrid architecture combining **Supabase** for persistent storage and **Socket.io** for ephemeral real-time events, hosted on a custom Next.js server.
+![System Architecture](/assets/system-architecture.png)
+
+Pollflow utilizes a modern **Serverless Architecture** combining **Supabase** for persistent storage and **Supabase Realtime** for instant updates, hosted on **Vercel**.
 
 
 
 ---
 
-## 🔄 User Workflow: The Voting Journey
+## 🔄 User Workflow
+
+![User Workflow](/assets/user-workflow.png)
+
+### The Voting Journey
 
 ```mermaid
 sequenceDiagram
