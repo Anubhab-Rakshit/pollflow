@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react'
 
-export function ServiceWorkerRegister() {
+export function PWARegister() {
     useEffect(() => {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker

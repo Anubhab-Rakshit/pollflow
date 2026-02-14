@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { NextApiResponseServerIo } from '@/types/types';
+
 
 // Helper to get socket server instance is tricky in App Router.
 // We will trigger the socket event by calling the pages API internally or just accepting that direct socket access isn't cleaner.

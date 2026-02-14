@@ -7,6 +7,7 @@ import { ArrowLeft, BarChart2, Download, Eye, TrendingUp, Users } from 'lucide-r
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
 import {
     Bar,
     BarChart,
@@ -16,12 +17,12 @@ import {
     YAxis,
     Cell
 } from 'recharts'
-import { useSocketPoll } from '@/lib/use-socket-poll'
+import { useRealtimePoll } from '@/lib/use-realtime-poll'
 import { toast } from 'sonner'
 
 export default function AnalyticsPage() {
     const params = useParams()
-    const slug = params.slug as string
+    const slug = params?.slug as string
     const [metrics, setMetrics] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 
@@ -42,11 +43,6 @@ export default function AnalyticsPage() {
         fetchAnalytics()
     }, [slug])
 
-    // Real-time updates (reuse socket logic but simpler)
-    // We'll trust the socket to send 'poll-update' which contains new vote counts
-    // For views, we might need to poll or add a socket event, but for now we'll just update votes live
-    // and maybe re-fetch views occasionally or just let them be static until refresh for performance.
-
     if (loading) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
@@ -57,7 +53,14 @@ export default function AnalyticsPage() {
 
     if (!metrics) return <div>Error loading data</div>
 
-    const { poll, metrics: stats, options } = metrics
+    return <AnalyticsView metrics={metrics} slug={slug} />
+}
+
+function AnalyticsView({ metrics, slug }: { metrics: any, slug: string }) {
+    const { poll, presenceCount } = useRealtimePoll(metrics.poll)
+    const stats = metrics.metrics
+    const options = poll.options // Use real-time options from hook
+
 
     return (
         <div className="min-h-screen bg-background text-foreground p-6 sm:p-12">

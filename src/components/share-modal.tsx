@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, Download, ExternalLink, check } from 'lucide-react';
+import { Copy, Download, ExternalLink, Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -72,7 +72,7 @@ export function ShareModal({ isOpen, onClose, url, title }: ShareModalProps) {
                         <div className="flex gap-2">
                             <Input value={url} readOnly className="font-mono text-sm" />
                             <Button size="icon" variant="outline" onClick={handleCopy}>
-                                {copied ? <check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </Button>
                         </div>
 

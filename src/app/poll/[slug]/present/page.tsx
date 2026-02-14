@@ -5,7 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { useParams } from 'next/navigation';
 import { Maximize, Minimize, Users, ArrowLeft } from 'lucide-react';
-import { useSocketPoll } from '@/lib/use-socket-poll';
+import { useRealtimePoll } from '@/lib/use-realtime-poll';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -36,7 +36,7 @@ export default function PresentationPage() {
 }
 
 function PresentationView({ initialPoll, slug }: { initialPoll: any, slug: string }) {
-    const { poll, presenceCount } = useSocketPoll(initialPoll);
+    const { poll, presenceCount } = useRealtimePoll(initialPoll);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [url, setUrl] = useState('');
 

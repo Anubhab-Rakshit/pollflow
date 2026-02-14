@@ -20,7 +20,7 @@ export default async function PollPage({ params }: { params: Promise<{ slug: str
     // Fetch Options
     const { data: options } = await supabase
         .from("poll_options")
-        .select("id, option_text, vote_count, position")
+        .select("id, option_text, vote_count, position, poll_id")
         .eq("poll_id", poll.id)
         .order("position", { ascending: true });
 

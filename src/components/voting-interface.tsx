@@ -5,8 +5,7 @@ import { Check, Loader2, Share2, Clock } from 'lucide-react'
 import Confetti from 'react-confetti'
 import { useWindowSize } from 'react-use'
 import CountUp from 'react-countup'
-import { useSocket } from "@/components/providers/socket-provider"
-import { useSocketPoll } from "@/lib/use-socket-poll"
+import { useRealtimePoll } from "@/lib/use-realtime-poll"
 import { useFingerprint } from "@/hooks/use-fingerprint"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -20,6 +19,7 @@ interface PollOption {
   option_text: string
   vote_count: number
   position: number
+  poll_id: string
   percentage?: number
 }
 
@@ -42,8 +42,7 @@ const Skeleton = ({ className = '' }: { className?: string }) => (
 )
 
 export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
-  const { poll, setPoll, isConnected, presenceCount, activities } = useSocketPoll(initialPoll);
-  const { socket } = useSocket();
+  const { poll, setPoll, isConnected, presenceCount, activities } = useRealtimePoll(initialPoll);
   const fingerprint = useFingerprint()
   // const [poll, setPoll] = useState<Poll>(initialPoll) // Managed by hook
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
@@ -165,13 +164,7 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
       localStorage.setItem(`poll_vote_${poll.id}`, optionId);
       toast.success("Vote recorded!")
 
-      if (socket) {
-        const selectedOptionObj = poll.options.find(o => o.id === optionId);
-        socket.emit("vote-cast", {
-          pollId: poll.id,
-          optionText: selectedOptionObj?.option_text
-        });
-      }
+      // Realtime update is handled by Supabase subscription in useRealtimePoll
 
       setShowConfetti(true)
       setTimeout(() => setShowConfetti(false), 5000)

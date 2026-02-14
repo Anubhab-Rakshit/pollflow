@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SocketProvider } from "@/components/providers/socket-provider";
+
 import { Toaster } from "react-hot-toast";
 import { OfflineBanner } from "@/components/offline-banner";
-import { ServiceWorkerRegister } from "@/components/sw-register";
+import { PWARegister } from "@/components/sw-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -70,12 +70,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SocketProvider>
-          <ServiceWorkerRegister />
-          <OfflineBanner />
-          {children}
-          <Toaster />
-        </SocketProvider>
+        <PWARegister />
+        <OfflineBanner />
+        {children}
+        <Toaster />
       </body>
     </html>
   );
