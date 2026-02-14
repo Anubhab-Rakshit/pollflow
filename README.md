@@ -33,60 +33,21 @@
 
 Pollflow utilizes a hybrid architecture combining **Supabase** for persistent storage and **Socket.io** for ephemeral real-time events, hosted on a custom Next.js server.
 
-```mermaid
-graph TD
-    Client[📱 Client (PWA/Browser)]
-    Server[🖥️ Next.js Server (Node.js)]
-    DB[(🗄️ Supabase Postgres)]
-    Socket[🔌 Socket.io Server]
+<img width="2411" height="2203" alt="system-arch" src="https://github.com/user-attachments/assets/8e4aa8ec-f356-4aaf-b0c9-22185388921e" />
 
-    Client -- "HTTP (Fetch Poll/Vote)" --> Server
-    Server -- "SQL (Persist Vote)" --> DB
-    Server -- "Emit 'vote-update'" --> Socket
-    Socket -- "Broadcast Update" --> Client
-    
-    subgraph "Real-time Layer"
-    Socket -- "Presence Events" --> Client
-    end
-
-    subgraph "Data Layer"
-    DB -- "Relational Data" --> Server
-    end
-```
 
 ---
 
 ## 🔄 User Workflow: The Voting Journey
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant C as Client App
-    participant A as API / Server
-    participant D as Database
-    participant S as Socket.io
-    participant O as Other Users
+<img width="5025" height="2011" alt="user-workflow" src="https://github.com/user-attachments/assets/b437fd05-9334-45b9-81dc-fce02569cbf5" />
 
-    U->>C: Selects Option & Clicks Vote
-    C->>C: Optimistic UI Update (Instant Feedback)
-    C->>A: POST /api/polls/{id}/vote
-    A->>D: Verify Fingerprint & Limits
-    alt Valid Vote
-        A->>D: INSERT Vote & UPDATE Count
-        D-->>A: Success
-        A->>S: Emit 'vote-cast' event
-        S-->>O: Broadcast new totals + Activity
-        S-->>C: Broadcast confirm
-        A-->>C: 200 OK
-        C->>U: Trigger Confetti 🎉
-    else Invalid / Duplicate
-        A-->>C: 403 Forbidden
-        C->>U: Show Error Toast
-        C->>C: Revert Optimistic Update
-    end
-```
 
 ---
+
+
+<img width="1453" height="1139" alt="workflow-arch" src="https://github.com/user-attachments/assets/f8bec892-56ff-4c6f-ac1d-31fe178cc722" />
+
 
 ## 🛠️ Technology Stack
 
