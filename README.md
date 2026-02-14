@@ -33,26 +33,7 @@
 
 Pollflow utilizes a hybrid architecture combining **Supabase** for persistent storage and **Socket.io** for ephemeral real-time events, hosted on a custom Next.js server.
 
-```mermaid
-graph TD
-    Client[📱 Client (PWA/Browser)]
-    Server[🖥️ Next.js Server (Node.js)]
-    DB[(🗄️ Supabase Postgres)]
-    Socket[🔌 Socket.io Server]
 
-    Client -- "HTTP (Fetch Poll/Vote)" --> Server
-    Server -- "SQL (Persist Vote)" --> DB
-    Server -- "Emit 'vote-update'" --> Socket
-    Socket -- "Broadcast Update" --> Client
-    
-    subgraph "Real-time Layer"
-    Socket -- "Presence Events" --> Client
-    end
-
-    subgraph "Data Layer"
-    DB -- "Relational Data" --> Server
-    end
-```
 
 ---
 
