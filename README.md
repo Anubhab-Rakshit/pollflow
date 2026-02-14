@@ -106,8 +106,8 @@ sequenceDiagram
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/yourusername/pollflow.git
-    cd pollflow/pollflow-realtime
+    git clone https://github.com/Anubhab-Rakshit/pollflow.git
+    cd pollflow/
     ```
 
 2.  **Install dependencies:**
@@ -138,6 +138,25 @@ Pollflow is designed to feel native on your phone.
 - **No Zoom**: Inputs are sized perfectly to prevent iOS auto-zoom.
 - **Haptics**: Subtle vibrations when you interact (supported devices).
 - **Offline**: View loaded polls even without an internet connection.
+
+---
+
+## ☁️ Deployment
+
+Pollflow is optimized for **Vercel**.
+
+### Vercel Configuration
+- **Build Command:** `npm run build`
+- **Output Directory:** `.next` (default)
+- **Install Command:** `npm install`
+
+### Environment Variables
+Ensure you add these to your Vercel Project Settings:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SITE_URL` (e.g., `https://your-project.vercel.app`)
+
+Since we use **Supabase Realtime**, no separate WebSocket server is needed. Everything works serverless! 🚀
 
 ---
 
