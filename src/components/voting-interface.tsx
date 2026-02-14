@@ -48,6 +48,18 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [hasVoted, setHasVoted] = useState(false)
   const [isVoting, setIsVoting] = useState(false)
+
+  // Record View on Mount
+  useEffect(() => {
+    const recordView = async () => {
+      try {
+        await fetch(`/api/polls/${initialPoll.slug}/view`, { method: 'POST' });
+      } catch (err) {
+        console.error('Failed to record view:', err);
+      }
+    };
+    recordView();
+  }, [initialPoll.slug]);
   // Timer State
   const [timeLeft, setTimeLeft] = useState<string>("");
   const [status, setStatus] = useState<'active' | 'ended' | 'scheduled'>('active');
