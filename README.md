@@ -141,4 +141,3 @@ Since we use **Supabase Realtime**, no separate WebSocket server is needed. Ever
 
 ---
 
-> Built with ❤️ by [Your Name/Team] for [Hackathon/Project Name]
