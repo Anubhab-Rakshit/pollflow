@@ -28,11 +28,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Pollflow | Next-Gen Voting",
     description: "Instant real-time polls for everyone. Create a poll in seconds.",
-    url: "https://pollflow.vercel.app",
+    url: "https://pollflow-theta.vercel.app",
     siteName: "Pollflow",
     images: [
       {
-        url: "https://pollflow.vercel.app/og-image.png", // specific image optimization not requested but good placeholder
+        url: "https://pollflow-theta.vercel.app/og-image.png", // specific image optimization not requested but good placeholder
         width: 1200,
         height: 630,
       },

@@ -9,7 +9,7 @@
 
 **Pollflow** is a next-generation polling platform that delivers **instant, real-time feedback** without the friction of sign-ups. Designed for speed, engagement, and accessibility, it transforms how audiences interact during events, meetings, and streams.
 
-🌐 **Live Demo:** [pollflow.vercel.app](https://pollflow.vercel.app) (Replace with actual link if deployed)
+🌐 **Live Demo:** [pollflow-theta.vercel.app](https://pollflow-theta.vercel.app)
 
 ---
 
