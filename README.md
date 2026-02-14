@@ -31,7 +31,8 @@
 
 ## 🏗️ Architecture
 
-![System Architecture](/assets/system-architecture.png)
+<img width="640" height="640" alt="image" src="https://github.com/user-attachments/assets/cb149635-6da1-4bea-a697-0e621cadb71e" />
+
 
 Pollflow utilizes a modern **Serverless Architecture** combining **Supabase** for persistent storage and **Supabase Realtime** for instant updates, hosted on **Vercel**.
 
@@ -40,8 +41,8 @@ Pollflow utilizes a modern **Serverless Architecture** combining **Supabase** fo
 ---
 
 ## 🔄 User Workflow
+<img width="640" height="640" alt="image" src="https://github.com/user-attachments/assets/685d395a-7c7a-4c42-8c27-03cb36500b0b" />
 
-![User Workflow](/assets/user-workflow.png)
 
 ### The Voting Journey
 
