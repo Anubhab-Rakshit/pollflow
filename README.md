@@ -9,7 +9,7 @@
 
 **Pollflow** is a next-generation polling platform that delivers **instant, real-time feedback** without the friction of sign-ups. Designed for speed, engagement, and accessibility, it transforms how audiences interact during events, meetings, and streams.
 
-🌐 **Live Demo:** [pollflow-theta.vercel.app](https://pollflow-theta.vercel.app)
+🌐 **Live Demo:** [pollflow.vercel.app](https://pollflow.vercel.app) (Replace with actual link if deployed)
 
 ---
 
@@ -29,22 +29,34 @@
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
-<img width="640" height="640" alt="image" src="https://github.com/user-attachments/assets/cb149635-6da1-4bea-a697-0e621cadb71e" />
+Pollflow utilizes a hybrid architecture combining **Supabase** for persistent storage and **Socket.io** for ephemeral real-time events, hosted on a custom Next.js server.
 
+```mermaid
+graph TD
+    Client[📱 Client (PWA/Browser)]
+    Server[🖥️ Next.js Server (Node.js)]
+    DB[(🗄️ Supabase Postgres)]
+    Socket[🔌 Socket.io Server]
 
-Pollflow utilizes a modern **Serverless Architecture** combining **Supabase** for persistent storage and **Supabase Realtime** for instant updates, hosted on **Vercel**.
+    Client -- "HTTP (Fetch Poll/Vote)" --> Server
+    Server -- "SQL (Persist Vote)" --> DB
+    Server -- "Emit 'vote-update'" --> Socket
+    Socket -- "Broadcast Update" --> Client
+    
+    subgraph "Real-time Layer"
+    Socket -- "Presence Events" --> Client
+    end
 
-
+    subgraph "Data Layer"
+    DB -- "Relational Data" --> Server
+    end
+```
 
 ---
 
-## 🔄 User Workflow
-<img width="640" height="640" alt="image" src="https://github.com/user-attachments/assets/685d395a-7c7a-4c42-8c27-03cb36500b0b" />
-
-
-### The Voting Journey
+## 🔄 User Workflow: The Voting Journey
 
 ```mermaid
 sequenceDiagram
@@ -148,3 +160,4 @@ Since we use **Supabase Realtime**, no separate WebSocket server is needed. Ever
 
 ---
 
+> Built with ❤️ by [Your Name/Team] for [Hackathon/Project Name]
