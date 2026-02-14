@@ -1,15 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Check, Loader2, Share2 } from 'lucide-react'
-import confetti from 'canvas-confetti'
+import { Check, Loader2, Share2, Clock } from 'lucide-react'
+import Confetti from 'react-confetti'
+import { useWindowSize } from 'react-use'
+import CountUp from 'react-countup'
 import { useSocket } from "@/components/providers/socket-provider"
 import { useSocketPoll } from "@/lib/use-socket-poll"
 import { useFingerprint } from "@/hooks/use-fingerprint"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { ShareModal } from "@/components/share-modal" // We will create this
+import { ShareModal } from "@/components/share-modal"
 import { motion, AnimatePresence } from "framer-motion"
+import { PresenceBadge } from './presence-badge'
+import { ActivityFeed } from './activity-feed'
 
 interface PollOption {
   id: string
@@ -25,6 +29,8 @@ interface Poll {
   created_at: string;
   slug: string;
   options: PollOption[];
+  expires_at?: string | null;
+  scheduled_for?: string | null;
 }
 
 interface VotingInterfaceProps {
@@ -36,16 +42,60 @@ const Skeleton = ({ className = '' }: { className?: string }) => (
 )
 
 export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
-  const { poll, setPoll, isConnected } = useSocketPoll(initialPoll);
+  const { poll, setPoll, isConnected, presenceCount, activities } = useSocketPoll(initialPoll);
   const { socket } = useSocket();
   const fingerprint = useFingerprint()
   // const [poll, setPoll] = useState<Poll>(initialPoll) // Managed by hook
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [hasVoted, setHasVoted] = useState(false)
   const [isVoting, setIsVoting] = useState(false)
-  const [isShareOpen, setIsShareOpen] = useState(false)
+  // Timer State
+  const [timeLeft, setTimeLeft] = useState<string>("");
+  const [status, setStatus] = useState<'active' | 'ended' | 'scheduled'>('active');
+  const { width, height } = useWindowSize()
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
-  // Realtime updates handled by useSocketPoll hook
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const expires = poll.expires_at ? new Date(poll.expires_at) : null;
+      const scheduled = poll.scheduled_for ? new Date(poll.scheduled_for) : null;
+
+      if (scheduled && scheduled > now) {
+        setStatus('scheduled');
+        const diff = scheduled.getTime() - now.getTime();
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diff / 1000 / 60) % 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+        setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      } else if (expires) {
+        if (expires <= now) {
+          setStatus('ended');
+          setTimeLeft("Poll Ended");
+        } else {
+          setStatus('active');
+          const diff = expires.getTime() - now.getTime();
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+          const minutes = Math.floor((diff / 1000 / 60) % 60);
+          const seconds = Math.floor((diff / 1000) % 60);
+
+          if (days > 0) setTimeLeft(`${days}d ${hours}h remaining`);
+          else if (hours > 0) setTimeLeft(`${hours}h ${minutes}m remaining`);
+          else setTimeLeft(`${minutes}m ${seconds}s remaining`);
+        }
+      } else {
+        setStatus('active');
+        setTimeLeft("");
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, [poll.expires_at, poll.scheduled_for]);
 
   // Calculate percentages
   const totalVotes = poll.options.reduce((sum, opt) => sum + opt.vote_count, 0)
@@ -54,81 +104,18 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
     percentage: totalVotes > 0 ? Math.round((opt.vote_count / totalVotes) * 100) : 0,
   }))
 
-  // Check for existing vote on mount
-  useEffect(() => {
-    // 1. Check LocalStorage first for immediate feedback
-    const localVote = localStorage.getItem(`poll_vote_${poll.id}`);
-    if (localVote) {
-      setHasVoted(true);
-      setSelectedOption(localVote);
-    }
-
-    if (!poll.slug || !fingerprint) return;
-
-    const checkVote = async () => {
-      try {
-        const res = await fetch(`/api/polls/${poll.slug}/vote?fingerprint=${fingerprint}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.hasVoted) {
-            setHasVoted(true);
-            setSelectedOption(data.optionId);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to check vote status:", error);
-      }
-    };
-
-    checkVote();
-  }, [poll.slug, fingerprint]);
-
-  // Offline Queue Processing
-  useEffect(() => {
-    const processQueue = async () => {
-      const queuedVote = localStorage.getItem(`offline_vote_${poll.id}`);
-      if (queuedVote && isConnected) { // Retry when socket/network connects
-        const optionId = queuedVote;
-        console.log("Processing queued vote:", optionId);
-
-        try {
-          // Re-attempt vote
-          const res = await fetch(`/api/polls/${poll.slug}/vote`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              optionId: optionId,
-              fingerprint,
-            }),
-          });
-
-          if (res.ok) {
-            localStorage.removeItem(`offline_vote_${poll.id}`);
-            setHasVoted(true);
-            toast.success("Vote synced!");
-          } else if (res.status === 403) {
-            localStorage.removeItem(`offline_vote_${poll.id}`); // Clear if invalid
-            setHasVoted(true);
-          }
-        } catch (e) {
-          // Keep in queue
-        }
-      }
-    };
-
-    if (isConnected) {
-      processQueue();
-    }
-  }, [isConnected, poll.id, poll.slug, fingerprint]);
-
   const handleVote = async (optionId: string) => {
-    if (hasVoted || isVoting || !fingerprint) return
+    if (hasVoted || isVoting || !fingerprint) return;
+    if (status !== 'active') {
+      toast.error(status === 'ended' ? "This poll has ended" : "This poll has not started yet");
+      return;
+    }
 
     setIsVoting(true)
     const previousSelection = selectedOption;
     const previousPollState = { ...poll };
 
-    // Optimistic Update: Immediately increment the vote count for the selected option
+    // Optimistic Update
     const optimisticOptions = poll.options.map(opt => {
       if (opt.id === optionId) {
         return { ...opt, vote_count: opt.vote_count + 1 };
@@ -157,7 +144,7 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
 
         if (res.status === 403) {
           setSelectedOption(previousSelection);
-          toast.error("You have already voted!");
+          toast.error(data.error || "You have already voted!");
 
           // Re-check status
           const statusRes = await fetch(`/api/polls/${poll.slug}/vote?fingerprint=${fingerprint}`);
@@ -166,7 +153,6 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
             if (statusData.hasVoted) {
               setHasVoted(true);
               setSelectedOption(statusData.optionId);
-              // We should also fetch the latest poll data to be sure
             }
           }
         } else {
@@ -176,36 +162,27 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
       }
 
       setHasVoted(true)
-      localStorage.setItem(`poll_vote_${poll.id}`, optionId); // Persist vote
+      localStorage.setItem(`poll_vote_${poll.id}`, optionId);
       toast.success("Vote recorded!")
 
-      // Emit socket event for others
       if (socket) {
-        socket.emit("vote-cast", { pollId: poll.id })
+        const selectedOptionObj = poll.options.find(o => o.id === optionId);
+        socket.emit("vote-cast", {
+          pollId: poll.id,
+          optionText: selectedOptionObj?.option_text
+        });
       }
 
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#0800ff', '#1a1a1a', '#ffffff'],
-      })
+      setShowConfetti(true)
+      setTimeout(() => setShowConfetti(false), 5000)
 
     } catch (error: any) {
-      // Revert everything
       setPoll(previousPollState);
       setSelectedOption(previousSelection);
 
-      // Check if it's a network error
       if (!navigator.onLine) {
         localStorage.setItem(`offline_vote_${poll.id}`, optionId);
         toast.info("You are offline. Vote queued and will sync automatically.");
-
-        // Keep the optimistic state effectively? 
-        // No, better to revert and show queued state or just queue it silently.
-        // For now, reverting visual state but queuing logic.
-        // Actually, if we queued it, maybe we should show "Pending"?
-        // Use Simple approach: Revert, Queue, Notify.
       } else {
         toast.error(error.message || "Failed to vote");
       }
@@ -215,11 +192,38 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 bg-card rounded-2xl shadow-sm border border-border">
-      <div className="flex justify-between items-start mb-6 sm:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight px-1">
-          {poll.question}
-        </h2>
+    <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 bg-card rounded-2xl shadow-sm border border-border relative overflow-hidden">
+      {showConfetti && <Confetti width={width} height={height} numberOfPieces={200} recycle={false} colors={['#0800ff', '#1a1a1a', '#ffffff']} />}
+
+      {/* Scheduled / Ended Banner */}
+      {status === 'scheduled' && (
+        <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center">
+          <Clock className="w-12 h-12 text-primary mb-4 animate-pulse" />
+          <h3 className="text-2xl font-bold mb-2">Poll Starts In</h3>
+          <p className="text-4xl font-mono font-bold text-primary mb-4">{timeLeft}</p>
+          <p className="text-muted-foreground">This poll is scheduled for {new Date(poll.scheduled_for!).toLocaleString()}</p>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 sm:mb-8">
+        <div className="space-y-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight px-1">
+            {poll.question}
+          </h2>
+          <div className="flex items-center gap-4">
+            <PresenceBadge count={presenceCount} />
+            {status === 'active' && timeLeft && (
+              <span className="text-sm font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-md flex items-center gap-1">
+                <Clock className="w-3 h-3" /> {timeLeft}
+              </span>
+            )}
+            {status === 'ended' && (
+              <span className="text-sm font-medium text-red-600 bg-red-50 px-2 py-1 rounded-md flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Poll Ended
+              </span>
+            )}
+          </div>
+        </div>
         <Button variant="ghost" size="icon" onClick={() => setIsShareOpen(true)}>
           <Share2 className="w-5 h-5" />
         </Button>
@@ -244,8 +248,8 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
                 animate={{ opacity: 1, y: 0 }}
                 className="relative"
               >
-                {hasVoted ? (
-                  <div className="relative overflow-hidden rounded-xl border border-border bg-card">
+                {hasVoted || status === 'ended' ? (
+                  <div className={`relative overflow-hidden rounded-xl border ${isSelected ? 'border-primary ring-1 ring-primary' : 'border-border'} bg-card transition-all`}>
                     {/* Background Bar */}
                     <div
                       className={`absolute top-0 bottom-0 left-0 transition-all duration-1000 ease-out ${isWinner ? 'bg-primary/20' : 'bg-muted/50'}`}
@@ -260,20 +264,20 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
                             <Check className="w-3 h-3" /> You
                           </span>
                         )}
+                        {isWinner && status === 'ended' && (
+                          <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-semibold">
+                            🏆 Winner
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-foreground">
                           {option.percentage}%
                         </span>
                         <span className="text-sm text-muted-foreground flex items-center gap-1">
-                          <motion.span
-                            key={option.vote_count}
-                            initial={{ scale: 1.2, opacity: 0.5 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="font-mono"
-                          >
-                            {option.vote_count}
-                          </motion.span>
+                          <span className="font-mono">
+                            <CountUp end={option.vote_count} duration={1.5} preserveValue />
+                          </span>
                           votes
                         </span>
                       </div>
@@ -282,7 +286,7 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
                 ) : (
                   <button
                     onClick={() => handleVote(option.id)}
-                    disabled={isVoting}
+                    disabled={isVoting || status !== 'active'}
                     className="w-full text-left p-4 border-2 border-border rounded-xl transition-all duration-200 hover:border-primary hover:bg-primary/5 hover:shadow-md active:scale-[0.99] group disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center gap-3">
@@ -313,12 +317,14 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
         </div>
       </div>
 
+      <ActivityFeed activities={activities} />
+
       <ShareModal
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
         url={typeof window !== 'undefined' ? window.location.href : ''}
         title={poll.question}
       />
-    </div>
+    </div >
   )
 }

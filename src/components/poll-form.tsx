@@ -1,17 +1,73 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { X, Plus, Loader2 } from 'lucide-react'
+import { X, Plus, Loader2, Sparkles, Wand2, Calendar, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useFingerprint } from '@/hooks/use-fingerprint'
 import { toast } from 'sonner'
+import { Template, KEYWORD_SUGGESTIONS } from '@/lib/templates'
 
-export function PollForm() {
+interface PollFormProps {
+  initialTemplate?: Template | null;
+}
+
+export function PollForm({ initialTemplate }: PollFormProps) {
   const [question, setQuestion] = useState('')
   const [options, setOptions] = useState(['', ''])
   const [focused, setFocused] = useState<number | null>(null)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+
+  // Advanced Settings
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [expiresAt, setExpiresAt] = useState('')
+  const [scheduledFor, setScheduledFor] = useState('')
+
+  // Auto-fill from template
+  useEffect(() => {
+    if (initialTemplate) {
+      setQuestion(initialTemplate.question)
+      const paddedOptions = [...initialTemplate.options]
+      while (paddedOptions.length < 2) paddedOptions.push('')
+      setOptions(paddedOptions)
+      toast.success(`Loaded template: ${initialTemplate.name}`)
+    }
+  }, [initialTemplate])
+
+  // Smart suggestions logic
+  useEffect(() => {
+    const lowerQuestion = question.toLowerCase();
+    let foundSuggestions: string[] = [];
+
+    // Simple keyword matching
+    for (const [keyword, suggestedOptions] of Object.entries(KEYWORD_SUGGESTIONS)) {
+      if (lowerQuestion.includes(keyword)) {
+        foundSuggestions = suggestedOptions;
+        break; // Stop at first match for now
+      }
+    }
+
+    // Only show if we found something AND the current options are mostly empty
+    const currentOptionsContent = options.filter(o => o.trim().length > 0).length;
+    if (foundSuggestions.length > 0 && currentOptionsContent < 2) {
+      setSuggestions(foundSuggestions);
+    } else {
+      setSuggestions([]);
+    }
+  }, [question, options]);
+
+  const applySuggestions = () => {
+    setOptions(suggestions);
+    setSuggestions([]);
+    toast.success("Applied smart suggestions!");
+  }
 
   const addOption = () => {
     if (options.length < 5) {
@@ -43,6 +99,16 @@ export function PollForm() {
       return
     }
 
+    // Validate dates
+    if (expiresAt && new Date(expiresAt) <= new Date()) {
+      toast.error('Expiration time must be in the future')
+      return
+    }
+    if (scheduledFor && expiresAt && new Date(scheduledFor) >= new Date(expiresAt)) {
+      toast.error('Scheduled start must be before expiration')
+      return
+    }
+
     setIsLoading(true)
     try {
       const res = await fetch("/api/polls", {
@@ -52,6 +118,8 @@ export function PollForm() {
           question,
           options: validOptions,
           creatorFingerprint: fingerprint,
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+          scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : null
         }),
       });
 
@@ -68,14 +136,43 @@ export function PollForm() {
   }
 
   return (
-    <section id="poll-form" className="py-20 px-4 bg-gradient-to-b from-muted/20 to-background">
+    <section id="poll-form" className="py-20 px-4 bg-gradient-to-b from-muted/20 to-background rounded-b-[3rem]">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">Create Your Poll</h2>
           <p className="text-muted-foreground">Design your poll and start collecting votes instantly</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20 ring-1 ring-black/5">
+        <form onSubmit={handleSubmit} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20 ring-1 ring-black/5 relative overflow-hidden">
+          {/* Smart Suggestion Banner */}
+          <AnimatePresence>
+            {suggestions.length > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="mb-6 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 rounded-xl overflow-hidden"
+              >
+                <div className="p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-sm font-medium">Found suggestions for your question!</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={applySuggestions}
+                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900"
+                  >
+                    <Wand2 className="w-3 h-3 mr-2" />
+                    Auto-fill
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Question Input */}
           <div className="mb-8">
             <label className="block text-sm font-semibold text-foreground mb-3">Poll Question</label>
@@ -88,14 +185,16 @@ export function PollForm() {
                 placeholder="What's your favorite programming language?"
                 className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-background text-foreground placeholder-muted-foreground pr-12 text-base"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-background/80 px-1">
+              <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs px-1 font-medium transition-colors ${question.length >= 100 ? 'text-red-500' :
+                question.length >= 80 ? 'text-yellow-500' : 'text-muted-foreground'
+                }`}>
                 {question.length}/100
               </span>
             </div>
           </div>
 
           {/* Options */}
-          <div className="mb-8">
+          <div className="mb-6">
             <label className="block text-sm font-semibold text-foreground mb-4">Options</label>
             <div className="space-y-3">
               <AnimatePresence initial={false} mode="popLayout">
@@ -146,22 +245,99 @@ export function PollForm() {
             </div>
 
             {/* Add Option Button */}
-            {options.length < 5 && (
-              <motion.button
-                layout
-                type="button"
-                onClick={addOption}
-                className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-muted text-muted-foreground rounded-xl hover:border-primary hover:text-primary transition-colors font-medium hover:bg-primary/5"
-                whileTap={{ scale: 0.98 }}
-              >
-                <Plus className="w-5 h-5" />
-                Add Option
-              </motion.button>
-            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-full">
+                    <motion.button
+                      layout
+                      type="button"
+                      onClick={addOption}
+                      disabled={options.length >= 5}
+                      className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-muted text-muted-foreground rounded-xl hover:border-primary hover:text-primary transition-colors font-medium hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Plus className="w-5 h-5" />
+                      Add Option
+                    </motion.button>
+                  </div>
+                </TooltipTrigger>
+                {options.length >= 5 && (
+                  <TooltipContent>
+                    <p>Maximum 5 options allowed</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
 
             {options.length === 5 && (
-              <p className="mt-3 text-sm text-muted-foreground text-center">Maximum 5 options reached</p>
+              <p className="mt-3 text-sm text-muted-foreground text-center animate-in fade-in slide-in-from-top-1">
+                Maximum 5 options reached
+              </p>
             )}
+          </div>
+
+          {/* Advanced Settings */}
+          <div className="mb-8 border-t border-border/50 pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground w-full justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span>Advanced Settings</span>
+              </div>
+              {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                        Auto-close at
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="datetime-local"
+                          value={expiresAt}
+                          onChange={(e) => setExpiresAt(e.target.value)}
+                          min={new Date().toISOString().slice(0, 16)}
+                          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
+                        />
+                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Poll will stop accepting votes after this time</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                        Schedule Start
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="datetime-local"
+                          value={scheduledFor}
+                          onChange={(e) => setScheduledFor(e.target.value)}
+                          min={new Date().toISOString().slice(0, 16)}
+                          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
+                        />
+                        <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Poll will happen in the future</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Submit Button */}

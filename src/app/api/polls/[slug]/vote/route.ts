@@ -44,15 +44,27 @@ export async function POST(
     }
 
     try {
-        // 1. Get poll ID
+        // 1. Get poll ID and time settings
         const { data: poll, error: pollError } = await supabase
             .from('polls')
-            .select('id')
+            .select('id, expires_at, scheduled_for')
             .eq('slug', slug)
             .single();
 
         if (pollError || !poll) {
             return NextResponse.json({ error: 'Poll not found' }, { status: 404 });
+        }
+
+        const now = new Date();
+
+        // Check if poll is scheduled for future
+        if (poll.scheduled_for && new Date(poll.scheduled_for) > now) {
+            return NextResponse.json({ error: 'This poll has not started yet' }, { status: 403 });
+        }
+
+        // Check if poll has expired
+        if (poll.expires_at && new Date(poll.expires_at) < now) {
+            return NextResponse.json({ error: 'This poll has ended' }, { status: 403 });
         }
 
         // 2. Check for existing vote (Strict Profile Check)

@@ -14,6 +14,8 @@ const CreatePollSchema = z.object({
             message: 'Options must be unique',
         }),
     creatorFingerprint: z.string().optional(),
+    expiresAt: z.string().nullable().optional(),
+    scheduledFor: z.string().nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { question, options, creatorFingerprint } = validation.data;
+        const { question, options, creatorFingerprint, expiresAt, scheduledFor } = validation.data;
 
         // 2. Security: Hash IP Address
         const ip = req.headers.get('x-forwarded-for') || 'unknown';
@@ -55,21 +57,46 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Failed to generate unique slug, please try again.' }, { status: 500 });
         }
 
-        // 4. Atomic Database Transaction (RPC)
-        const { data: pollId, error } = await supabase.rpc('create_poll', {
-            p_question: question,
-            p_slug: slug,
-            p_creator_fingerprint: creatorFingerprint || null,
-            p_creator_ip_hash: ipHash,
-            p_options: options,
-        });
+        // 4. Insert Poll (Direct Insert)
+        const { data: pollData, error: pollError } = await supabase
+            .from('polls')
+            .insert({
+                question,
+                slug,
+                creator_fingerprint: creatorFingerprint || null,
+                creator_ip_hash: ipHash,
+                expires_at: expiresAt || null,
+                scheduled_for: scheduledFor || null,
+            })
+            .select('id')
+            .single();
 
-        if (error) {
-            console.error('Supabase RPC Error:', error);
-            return NextResponse.json({ error: 'Database transaction failed', details: error.message }, { status: 500 });
+        if (pollError) {
+            console.error('Supabase Insert Error:', pollError);
+            return NextResponse.json({ error: 'Database insert failed', details: pollError.message }, { status: 500 });
         }
 
-        // 5. Success Response
+        const pollId = pollData.id;
+
+        // 5. Insert Options
+        const optionsData = options.map((text, index) => ({
+            poll_id: pollId,
+            option_text: text,
+            position: index,
+        }));
+
+        const { error: optionsError } = await supabase
+            .from('poll_options')
+            .insert(optionsData);
+
+        if (optionsError) {
+            // Rollback (delete poll) if options fail
+            await supabase.from('polls').delete().eq('id', pollId);
+            console.error('Supabase Options Insert Error:', optionsError);
+            return NextResponse.json({ error: 'Failed to save options', details: optionsError.message }, { status: 500 });
+        }
+
+        // 6. Success Response
         return NextResponse.json({
             success: true,
             pollSlug: slug,

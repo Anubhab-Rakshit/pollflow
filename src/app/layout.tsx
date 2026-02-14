@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SocketProvider } from "@/components/providers/socket-provider";
 import { Toaster } from "react-hot-toast";
+import { OfflineBanner } from "@/components/offline-banner";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +17,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pollflow | Real-time Voting Platform",
-  description: "Create, share, and vote on polls instantly with real-time updates. No signup required.",
+  title: "Pollflow - Real-time Polls",
+  description: "Create and share real-time polls instantly.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Pollflow",
+  },
   openGraph: {
     title: "Pollflow | Next-Gen Voting",
     description: "Instant real-time polls for everyone. Create a poll in seconds.",
@@ -39,8 +47,17 @@ export const metadata: Metadata = {
     creator: "@pollflow",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4f46e5",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -54,8 +71,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <SocketProvider>
+          <ServiceWorkerRegister />
+          <OfflineBanner />
           {children}
-          <Toaster position="bottom-right" />
+          <Toaster />
         </SocketProvider>
       </body>
     </html>

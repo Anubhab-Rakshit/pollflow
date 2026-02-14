@@ -9,7 +9,7 @@ export default async function PollPage({ params }: { params: Promise<{ slug: str
     // Fetch Poll Data
     const { data: poll, error } = await supabase
         .from("polls")
-        .select("id, question, created_at, slug")
+        .select("id, question, created_at, slug, expires_at, scheduled_for")
         .eq("slug", slug)
         .single();
 

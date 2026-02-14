@@ -17,9 +17,19 @@ interface Poll {
     options: PollOption[];
 }
 
+export interface ActivityItem {
+    id: string;
+    type: "vote" | "join";
+    text: string;
+    timestamp: number;
+    color: string;
+}
+
 export const useSocketPoll = (initialPoll: Poll) => {
     const { socket, isConnected } = useSocket();
     const [poll, setPoll] = useState<Poll>(initialPoll);
+    const [presenceCount, setPresenceCount] = useState(0);
+    const [activities, setActivities] = useState<ActivityItem[]>([]);
 
     useEffect(() => {
         if (!socket || !poll.id) return;
@@ -32,6 +42,22 @@ export const useSocketPoll = (initialPoll: Poll) => {
             if (updatedPoll.id === poll.id) {
                 setPoll(updatedPoll);
             }
+        });
+
+        socket.on("presence-update", (count: number) => {
+            setPresenceCount(count);
+        });
+
+        socket.on("new-activity", (activity: Omit<ActivityItem, 'id'>) => {
+            // Generate a random ID for the activity item on client if needed, 
+            // though React keys should ideally be stable.
+            const newActivity = { ...activity, id: Math.random().toString(36).substr(2, 9) };
+            setActivities(prev => {
+                const newState = [...prev, newActivity];
+                // Keep last 5 activities
+                if (newState.length > 5) return newState.slice(newState.length - 5);
+                return newState;
+            });
         });
 
         // Re-fetch on reconnect or visibility change
@@ -60,11 +86,13 @@ export const useSocketPoll = (initialPoll: Poll) => {
 
         return () => {
             socket.off("poll-update");
+            socket.off("presence-update");
+            socket.off("new-activity");
             socket.off("connect", refreshPoll);
             socket.emit("leave-poll", poll.id);
             document.removeEventListener("visibilitychange", onVisibilityChange);
         };
     }, [socket, poll.id, poll.slug]);
 
-    return { poll, setPoll, isConnected };
+    return { poll, setPoll, isConnected, presenceCount, activities };
 };

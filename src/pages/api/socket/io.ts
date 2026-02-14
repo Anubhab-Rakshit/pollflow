@@ -20,20 +20,52 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
         });
         res.socket.server.io = io;
 
+        // Track presence per room
+        // In-memory store: Map<pollId, Set<socketId>>
+        const roomPresence = (global as any).roomPresence || new Map<string, Set<string>>();
+        (global as any).roomPresence = roomPresence;
+
+        const updatePresence = (pollId: string) => {
+            const room = roomPresence.get(pollId);
+            const count = room ? room.size : 0;
+            io.to(pollId).emit("presence-update", count);
+        };
+
         io.on("connection", (socket: any) => {
             console.log("Socket connected:", socket.id);
 
             socket.on("join-poll", (pollId: string) => {
                 socket.join(pollId);
-                // console.log(`Socket ${socket.id} joined poll ${pollId}`);
+
+                if (!roomPresence.has(pollId)) {
+                    roomPresence.set(pollId, new Set());
+                }
+                roomPresence.get(pollId).add(socket.id);
+
+                // Save pollId on socket for disconnect handling
+                socket.pollId = pollId;
+
+                updatePresence(pollId);
             });
 
             socket.on("leave-poll", (pollId: string) => {
                 socket.leave(pollId);
+                if (roomPresence.has(pollId)) {
+                    roomPresence.get(pollId).delete(socket.id);
+                    updatePresence(pollId);
+                }
+            });
+
+            socket.on("disconnect", () => {
+                const pollId = socket.pollId;
+                if (pollId && roomPresence.has(pollId)) {
+                    roomPresence.get(pollId).delete(socket.id);
+                    updatePresence(pollId);
+                }
             });
 
             // When a vote is cast, we re-fetch the poll options and broadcast
-            socket.on("vote-cast", async ({ pollId }: { pollId: string }) => {
+            socket.on("vote-cast", async ({ pollId, optionText }: { pollId: string, optionText?: string }) => {
                 try {
                     // Re-fetch data
                     const { data: poll, error: pollError } = await supabase
@@ -54,8 +86,18 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
                             options: options || []
                         };
 
-                        // Broadcast to everyone in the room
+                        // Broadcast update
                         io.to(pollId).emit("poll-update", fullPoll);
+
+                        // Broadcast new activity (Anonymous)
+                        if (optionText) {
+                            io.to(pollId).emit("new-activity", {
+                                type: "vote",
+                                text: `Someone voted for ${optionText}`,
+                                timestamp: Date.now(),
+                                color: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEEAD"][Math.floor(Math.random() * 5)]
+                            });
+                        }
                     }
                 } catch (err) {
                     console.error("Socket error processing vote-cast:", err);

@@ -1,0 +1,21 @@
+{
+    "name": "Pollflow Realtime",
+    "short_name": "Pollflow",
+    "description": "Real-time voting and polls for everyone.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#4f46e5",
+    "icons": [
+        {
+            "src": "/icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "/apple-icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
