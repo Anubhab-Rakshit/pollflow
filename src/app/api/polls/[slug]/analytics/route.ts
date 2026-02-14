@@ -58,15 +58,17 @@ export async function GET(
 
         return NextResponse.json({
             poll: {
+                id: poll.id,
                 question: poll.question,
-                created_at: poll.created_at
+                created_at: poll.created_at,
+                slug: slug,
+                options: safeOptions
             },
             metrics: {
                 total_views: totalViews || 0,
                 total_votes: totalVotes,
                 conversion_rate: conversionRate
-            },
-            options: safeOptions
+            }
         })
     } catch (error: any) {
         console.error("Analytics Route Exception:", error);
