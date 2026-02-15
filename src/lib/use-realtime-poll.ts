@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
-// Define strict types for our data
 interface PollOption {
     id: string;
     option_text: string;
@@ -41,7 +40,6 @@ export const useRealtimePoll = (initialPoll: Poll) => {
     useEffect(() => {
         if (!poll?.id) return;
 
-        // Create a single channel for all poll-related events
         const channel = supabase.channel(`poll:${poll.id}`, {
             config: {
                 presence: {
@@ -51,7 +49,6 @@ export const useRealtimePoll = (initialPoll: Poll) => {
         });
 
         channel
-            // 1. Listen for new votes (Updates to poll_options table)
             .on(
                 'postgres_changes',
                 {
@@ -70,7 +67,6 @@ export const useRealtimePoll = (initialPoll: Poll) => {
                         return { ...currentPoll, options: newOptions };
                     });
 
-                    // Derive activity from the update
                     const optionText = poll.options.find(o => o.id === updatedOption.id)?.option_text || "an option";
                     const newActivity: ActivityItem = {
                         id: Math.random().toString(36).substr(2, 9),
@@ -83,7 +79,6 @@ export const useRealtimePoll = (initialPoll: Poll) => {
                     setActivities((prev) => [newActivity, ...prev].slice(0, 5));
                 }
             )
-            // 2. Listen for poll status updates (e.g. expiration)
             .on(
                 'postgres_changes',
                 {
@@ -97,19 +92,16 @@ export const useRealtimePoll = (initialPoll: Poll) => {
                     setPoll((current) => ({ ...current, ...updatedPollData }));
                 }
             )
-            // 3. Presence (Who is online)
             .on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState();
                 const count = Object.keys(state).length;
                 setPresenceCount(count);
             })
             .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-                // Optionally track joins
             })
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
                     setIsConnected(true);
-                    // Dismiss reconnecting toast if present
                     if (reconnectToastId.current) {
                         toast.dismiss(reconnectToastId.current);
                         toast.success('Connected ✓', {

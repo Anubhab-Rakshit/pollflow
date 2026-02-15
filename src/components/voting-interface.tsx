@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Check, Loader2, Share2, Crown } from 'lucide-react'
+import { Check, Loader2, Share2, Crown, Clock } from 'lucide-react'
 import Confetti from 'react-confetti'
 import { useWindowSize } from 'react-use'
 import CountUp from 'react-countup'
@@ -159,8 +159,18 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
         } else {
           setStatus('active');
           const diff = expires.getTime() - now.getTime();
-          // Optional: Show count down for ending too? User didn't ask.
-          setTimeLeft("");
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+          const parts = [];
+          if (days > 0) parts.push(`${days}d`);
+          if (hours > 0) parts.push(`${hours}h`);
+          if (minutes > 0) parts.push(`${minutes}m`);
+          if (seconds > 0) parts.push(`${seconds}s`);
+
+          setTimeLeft(parts.join(' ') || "0s");
         }
       } else {
         setStatus('active');
@@ -267,9 +277,23 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
 
       {/* Header — stays in place during transition */}
       <div className="space-y-6 text-center mb-10">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-foreground/5 border border-foreground/10 backdrop-blur-sm">
-          <PresenceBadge count={presenceCount} />
-          {status === 'ended' && <span className="text-red-400 text-sm ml-2">Ended</span>}
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2">
+            <PresenceBadge count={presenceCount} />
+            {status === 'active' && poll.expires_at && timeLeft && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-500 text-xs font-medium">
+                <Clock className="w-3 h-3" />
+                Ends in {timeLeft}
+              </div>
+            )}
+            {status === 'scheduled' && timeLeft && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-xs font-medium">
+                <Clock className="w-3 h-3" />
+                Starts in {timeLeft}
+              </div>
+            )}
+            {status === 'ended' && <span className="text-red-400 text-sm font-medium px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20">Ended</span>}
+          </div>
         </div>
         <h1
           className="text-foreground font-bold tracking-tight leading-[1.1]"
@@ -277,10 +301,6 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
         >
           {poll.question}
         </h1>
-        <div className="text-[10px] text-foreground/30 font-mono bg-foreground/5 p-2 rounded mt-2 inline-block">
-          DEBUG: Status={status} | Now={new Date().toISOString()}<br />
-          Scheduled={poll.scheduled_for} | Expires={poll.expires_at}
-        </div>
       </div>
 
       {/* Skeleton / Voting / Results */}
