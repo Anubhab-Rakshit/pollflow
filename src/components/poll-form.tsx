@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { X, Plus, Loader2, Sparkles, Wand2, Calendar, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, Plus, Loader2, Sparkles, Calendar, Clock, ChevronDown, ChevronUp, Wand2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Tooltip,
@@ -24,11 +24,15 @@ export function PollForm({ initialTemplate }: PollFormProps) {
   const [options, setOptions] = useState(['', ''])
   const [focused, setFocused] = useState<number | null>(null)
   const [suggestions, setSuggestions] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
   // Advanced Settings
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [expiresAt, setExpiresAt] = useState('')
   const [scheduledFor, setScheduledFor] = useState('')
+
+  const fingerprint = useFingerprint()
+  const router = useRouter()
 
   // Auto-fill from template
   useEffect(() => {
@@ -46,15 +50,13 @@ export function PollForm({ initialTemplate }: PollFormProps) {
     const lowerQuestion = question.toLowerCase();
     let foundSuggestions: string[] = [];
 
-    // Simple keyword matching
     for (const [keyword, suggestedOptions] of Object.entries(KEYWORD_SUGGESTIONS)) {
       if (lowerQuestion.includes(keyword)) {
         foundSuggestions = suggestedOptions;
-        break; // Stop at first match for now
+        break;
       }
     }
 
-    // Only show if we found something AND the current options are mostly empty
     const currentOptionsContent = options.filter(o => o.trim().length > 0).length;
     if (foundSuggestions.length > 0 && currentOptionsContent < 2) {
       setSuggestions(foundSuggestions);
@@ -87,10 +89,6 @@ export function PollForm({ initialTemplate }: PollFormProps) {
     setOptions(newOptions)
   }
 
-  const fingerprint = useFingerprint()
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const validOptions = options.filter((opt) => opt.trim().length > 0)
@@ -99,240 +97,182 @@ export function PollForm({ initialTemplate }: PollFormProps) {
       return
     }
 
-    // Validate dates
-    if (expiresAt && new Date(expiresAt) <= new Date()) {
-      toast.error('Expiration time must be in the future')
-      return
-    }
-    if (scheduledFor && expiresAt && new Date(scheduledFor) >= new Date(expiresAt)) {
-      toast.error('Scheduled start must be before expiration')
-      return
-    }
-
     setIsLoading(true)
     try {
-      const res = await fetch("/api/polls", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/polls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question,
           options: validOptions,
-          creatorFingerprint: fingerprint,
-          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
-          scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : null
+          fingerprint,
+          expires_at: expiresAt || null,
+          scheduled_for: scheduledFor || null,
         }),
-      });
+      })
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!response.ok) throw new Error('Failed to create poll')
 
-      toast.success("Poll created successfully!");
-      router.push(`/poll/${data.pollSlug}`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create poll");
+      const data = await response.json()
+      toast.success('Poll created successfully!')
+      router.push(`/poll/${data.slug}`)
+    } catch (error) {
+      toast.error('Something went wrong. Please try again.')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
 
   return (
-    <section id="poll-form" className="py-20 px-4 bg-gradient-to-b from-muted/20 to-background rounded-b-[3rem]">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">Create Your Poll</h2>
-          <p className="text-muted-foreground">Design your poll and start collecting votes instantly</p>
-        </div>
+    <div id="poll-form" className="w-full max-w-2xl mx-auto p-4 perspective-1000">
+      <motion.div
+        initial={{ opacity: 0, rotateX: 10 }}
+        whileInView={{ opacity: 1, rotateX: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="glass-card rounded-3xl p-8 sm:p-10 relative overflow-hidden"
+      >
+        {/* Decorative Glow */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[100px] -z-10" />
 
-        <form onSubmit={handleSubmit} className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20 ring-1 ring-black/5 relative overflow-hidden">
-          {/* Smart Suggestion Banner */}
-          <AnimatePresence>
-            {suggestions.length > 0 && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="mb-6 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 rounded-xl overflow-hidden"
-              >
-                <div className="p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
-                    <Sparkles className="w-4 h-4" />
-                    <span className="text-sm font-medium">Found suggestions for your question!</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={applySuggestions}
-                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-indigo-900"
-                  >
-                    <Wand2 className="w-3 h-3 mr-2" />
-                    Auto-fill
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
+        <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
           {/* Question Input */}
-          <div className="mb-8">
-            <label className="block text-sm font-semibold text-foreground mb-3">Poll Question</label>
+          <div className="space-y-2 group">
+            <label className="text-sm font-medium text-white/60 ml-1 group-focus-within:text-white transition-colors">
+              What would you like to ask?
+            </label>
             <div className="relative">
               <input
                 type="text"
                 value={question}
-                maxLength={100}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="What's your favorite programming language?"
-                className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-background text-foreground placeholder-muted-foreground pr-12 text-base"
+                placeholder="e.g., What's your favorite framework?"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-xl font-medium text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                autoFocus
               />
-              <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs px-1 font-medium transition-colors ${question.length >= 100 ? 'text-red-500' :
-                question.length >= 80 ? 'text-yellow-500' : 'text-muted-foreground'
-                }`}>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-white/30">
                 {question.length}/100
               </span>
             </div>
           </div>
 
-          {/* Options */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-foreground mb-4">Options</label>
-            <div className="space-y-3">
-              <AnimatePresence initial={false} mode="popLayout">
-                {options.map((option, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    layout
-                    className="flex items-center gap-3 group"
-                  >
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={option}
-                        maxLength={50}
-                        onChange={(e) => updateOption(index, e.target.value)}
-                        onFocus={() => setFocused(index)}
-                        onBlur={() => setFocused(null)}
-                        placeholder={`Option ${index + 1}`}
-                        className="w-full px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all bg-background text-foreground placeholder-muted-foreground pr-12 text-base"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-background/80 px-1 pointer-events-none">
-                        {option.length}/50
-                      </span>
-                    </div>
-
-                    {/* Remove button - only show if more than 2 options */}
-                    {options.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => removeOption(index)}
-                        className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        aria-label={`Remove option ${index + 1}`}
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    )}
-
-                    {/* Placeholder for alignment */}
-                    {options.length === 2 && (
-                      <div className="w-9" />
-                    )}
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-
-            {/* Add Option Button */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="w-full">
-                    <motion.button
-                      layout
-                      type="button"
-                      onClick={addOption}
-                      disabled={options.length >= 5}
-                      className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-muted text-muted-foreground rounded-xl hover:border-primary hover:text-primary transition-colors font-medium hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Plus className="w-5 h-5" />
-                      Add Option
-                    </motion.button>
+          {/* Suggestions Banner */}
+          <AnimatePresence>
+            {suggestions.length > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div
+                  onClick={applySuggestions}
+                  className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-indigo-500/20 transition-colors"
+                >
+                  <Wand2 className="w-5 h-5 text-indigo-400" />
+                  <div className="flex-1">
+                    <p className="text-sm text-indigo-200 font-medium">Auto-fill options?</p>
+                    <p className="text-xs text-indigo-400/80 truncate">{suggestions.join(', ')}</p>
                   </div>
-                </TooltipTrigger>
-                {options.length >= 5 && (
-                  <TooltipContent>
-                    <p>Maximum 5 options allowed</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
+                  <Button size="sm" variant="ghost" className="text-indigo-300 hover:text-indigo-100 hover:bg-indigo-500/30">Apply</Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {options.length === 5 && (
-              <p className="mt-3 text-sm text-muted-foreground text-center animate-in fade-in slide-in-from-top-1">
-                Maximum 5 options reached
-              </p>
+          {/* Options Inputs */}
+          <div className="space-y-4">
+            <label className="text-sm font-medium text-white/60 ml-1">
+              Poll Options
+            </label>
+            <AnimatePresence mode="popLayout">
+              {options.map((option, index) => (
+                <motion.div
+                  key={index}
+                  layout
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="flex gap-3 items-center group"
+                >
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={option}
+                      onChange={(e) => updateOption(index, e.target.value)}
+                      onFocus={() => setFocused(index)}
+                      onBlur={() => setFocused(null)}
+                      placeholder={`Option ${index + 1}`}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:bg-white/10 focus:border-white/30 transition-all"
+                    />
+                  </div>
+
+                  {options.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => removeOption(index)}
+                      className="p-2 text-white/30 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {options.length < 5 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addOption}
+                className="w-full border-dashed border-white/20 bg-transparent text-white/50 hover:text-white hover:bg-white/5 hover:border-white/40 h-12 rounded-xl mt-2"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add Option
+              </Button>
             )}
           </div>
 
-          {/* Advanced Settings */}
-          <div className="mb-8 border-t border-border/50 pt-4">
-            <Button
+          {/* Advanced Settings Toggle */}
+          <div className="pt-4 border-t border-white/10">
+            <button
               type="button"
-              variant="ghost"
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground w-full justify-between"
+              className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span>Advanced Settings</span>
-              </div>
               {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </Button>
+              Advanced Settings
+            </button>
 
             <AnimatePresence>
               {showAdvanced && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
+                  animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
                   <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                        Auto-close at
+                      <label className="text-xs text-white/60 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Auto-End Date
                       </label>
-                      <div className="relative">
-                        <input
-                          type="datetime-local"
-                          value={expiresAt}
-                          onChange={(e) => setExpiresAt(e.target.value)}
-                          min={new Date().toISOString().slice(0, 16)}
-                          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
-                        />
-                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">Poll will stop accepting votes after this time</p>
+                      <input
+                        type="datetime-local"
+                        value={expiresAt}
+                        onChange={(e) => setExpiresAt(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                      />
                     </div>
-
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                        Schedule Start
+                      <label className="text-xs text-white/60 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" /> Schedule Start
                       </label>
-                      <div className="relative">
-                        <input
-                          type="datetime-local"
-                          value={scheduledFor}
-                          onChange={(e) => setScheduledFor(e.target.value)}
-                          min={new Date().toISOString().slice(0, 16)}
-                          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
-                        />
-                        <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">Poll will happen in the future</p>
+                      <input
+                        type="datetime-local"
+                        value={scheduledFor}
+                        onChange={(e) => setScheduledFor(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+                      />
                     </div>
                   </div>
                 </motion.div>
@@ -340,28 +280,23 @@ export function PollForm({ initialTemplate }: PollFormProps) {
             </AnimatePresence>
           </div>
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            size="lg"
-            disabled={isLoading || !question.trim() || options.filter(o => o.trim()).length < 2}
-            className="w-full bg-gradient-to-r from-primary to-primary/90 text-primary-foreground font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.1)] hover:shadow-[0_0_25px_rgba(0,0,0,0.2)] transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Poll...
-              </>
-            ) : (
-              "Create & Share Poll"
-            )}
-          </Button>
-
-          <p className="mt-4 text-xs text-muted-foreground text-center">
-            Your poll link will be ready to share immediately
-          </p>
+          <div className="pt-4">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-14 bg-gradient-to-r from-primary to-accent hover:opacity-90 text-white font-bold text-lg rounded-xl shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] hover:shadow-primary/40"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Creating Poll...
+                </>
+              ) : (
+                "Create & Share Poll"
+              )}
+            </Button>
+          </div>
         </form>
-      </div>
-    </section>
+      </motion.div>
+    </div>
   )
 }

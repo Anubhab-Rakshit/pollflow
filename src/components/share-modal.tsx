@@ -3,10 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, Download, ExternalLink, Check } from 'lucide-react';
+import { Copy, Check, Twitter, Mail, Download } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
-import Link from 'next/link';
 
 interface ShareModalProps {
     isOpen: boolean;
@@ -26,14 +25,13 @@ export function ShareModal({ isOpen, onClose, url, title }: ShareModalProps) {
     };
 
     const downloadQRCode = () => {
+        // ... (Same logic as before, just kept for brevity)
         const svg = document.getElementById('qr-code-svg');
         if (!svg) return;
-
         const svgData = new XMLSerializer().serializeToString(svg);
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         const img = new Image();
-
         img.onload = () => {
             canvas.width = img.width;
             canvas.height = img.height;
@@ -57,60 +55,70 @@ export function ShareModal({ isOpen, onClose, url, title }: ShareModalProps) {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md bg-[#0f172a] border border-white/10 text-white shadow-2xl backdrop-blur-xl">
                 <DialogHeader>
-                    <DialogTitle>Share this Poll</DialogTitle>
+                    <DialogTitle className="text-2xl font-bold text-center">Share this Poll</DialogTitle>
                 </DialogHeader>
 
-                <Tabs defaultValue="link" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="link">Link & Social</TabsTrigger>
-                        <TabsTrigger value="qr">QR Code</TabsTrigger>
+                <Tabs defaultValue="link" className="w-full mt-4">
+                    <TabsList className="grid w-full grid-cols-2 bg-white/5">
+                        <TabsTrigger
+                            value="link"
+                            className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+                        >
+                            Link & Social
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="qr"
+                            className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
+                        >
+                            QR Code
+                        </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="link" className="space-y-4 py-4">
-                        <div className="flex gap-2">
-                            <Input value={url} readOnly className="font-mono text-sm" />
-                            <Button size="icon" variant="outline" onClick={handleCopy}>
-                                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                            </Button>
+                    <TabsContent value="link" className="space-y-6 py-4">
+                        <div className="space-y-2">
+                            <label className="text-xs text-white/50 uppercase font-semibold tracking-wider">Poll Link</label>
+                            <div className="flex gap-2">
+                                <Input
+                                    value={url}
+                                    readOnly
+                                    className="bg-white/5 border-white/10 text-white/80 font-mono text-sm focus-visible:ring-primary"
+                                />
+                                <Button
+                                    size="icon"
+                                    onClick={handleCopy}
+                                    className={`${copied ? 'bg-green-500 hover:bg-green-600' : 'bg-white/10 hover:bg-white/20'} transition-colors`}
+                                >
+                                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                </Button>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
-                            <Button variant="outline" className="flex flex-col h-20 gap-2 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors" asChild>
-                                <a href={`whatsapp://send?text=${encodedTitle} - Vote now: ${encodedUrl}`} target="_blank" rel="noopener noreferrer">
-                                    <span className="text-xl">📱</span>
+                        <div className="grid grid-cols-3 gap-3">
+                            <a href={`whatsapp://send?text=${encodedTitle} - Vote now: ${encodedUrl}`} target="_blank" rel="noopener noreferrer" className="contents">
+                                <Button variant="outline" className="flex flex-col h-20 gap-2 border-white/10 bg-white/5 hover:bg-[#25D366]/20 hover:border-[#25D366]/50 hover:text-[#25D366] transition-all">
+                                    <span className="text-2xl">📱</span>
                                     <span className="text-xs">WhatsApp</span>
-                                </a>
-                            </Button>
-                            <Button variant="outline" className="flex flex-col h-20 gap-2 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-200 transition-colors" asChild>
-                                <a href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`} target="_blank" rel="noopener noreferrer">
-                                    <span className="text-xl">🐦</span>
+                                </Button>
+                            </a>
+                            <a href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`} target="_blank" rel="noopener noreferrer" className="contents">
+                                <Button variant="outline" className="flex flex-col h-20 gap-2 border-white/10 bg-white/5 hover:bg-[#1DA1F2]/20 hover:border-[#1DA1F2]/50 hover:text-[#1DA1F2] transition-all">
+                                    <Twitter className="w-6 h-6" />
                                     <span className="text-xs">Twitter</span>
-                                </a>
-                            </Button>
-                            <Button variant="outline" className="flex flex-col h-20 gap-2 hover:bg-gray-50 hover:text-gray-700 hover:border-gray-200 transition-colors" asChild>
-                                <a href={`mailto:?subject=${encodedTitle}&body=Vote on this poll: ${encodedUrl}`} target="_blank" rel="noopener noreferrer">
-                                    <span className="text-xl">✉️</span>
+                                </Button>
+                            </a>
+                            <a href={`mailto:?subject=${encodedTitle}&body=Vote on this poll: ${encodedUrl}`} target="_blank" rel="noopener noreferrer" className="contents">
+                                <Button variant="outline" className="flex flex-col h-20 gap-2 border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30 hover:text-white transition-all">
+                                    <Mail className="w-6 h-6" />
                                     <span className="text-xs">Email</span>
-                                </a>
-                            </Button>
-                        </div>
-
-                        <div className="pt-4 border-t flex justify-between text-sm text-muted-foreground">
-                            <Link href={`${url}/poster`} className="flex items-center gap-1 hover:text-primary transition-colors">
-                                <ExternalLink className="w-3 h-3" />
-                                Print Poster
-                            </Link>
-                            <Link href={`${url}/present`} className="flex items-center gap-1 hover:text-primary transition-colors">
-                                <ExternalLink className="w-3 h-3" />
-                                Presentation Mode
-                            </Link>
+                                </Button>
+                            </a>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="qr" className="flex flex-col items-center gap-6 py-4">
-                        <div className="p-4 bg-white rounded-xl border shadow-sm">
+                    <TabsContent value="qr" className="py-4 flex flex-col items-center gap-6">
+                        <div className="p-4 bg-white rounded-xl">
                             <QRCodeSVG
                                 id="qr-code-svg"
                                 value={url}
@@ -119,9 +127,8 @@ export function ShareModal({ isOpen, onClose, url, title }: ShareModalProps) {
                                 includeMargin={true}
                             />
                         </div>
-                        <Button onClick={downloadQRCode} className="w-full">
-                            <Download className="mr-2 h-4 w-4" />
-                            Download PNG
+                        <Button onClick={downloadQRCode} variant="outline" className="w-full border-white/10 bg-white/5 hover:bg-white/10 text-white">
+                            <Download className="mr-2 h-4 w-4" /> Download QR Code
                         </Button>
                     </TabsContent>
                 </Tabs>

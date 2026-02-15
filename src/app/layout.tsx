@@ -1,19 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
 import { Toaster } from "react-hot-toast";
 import { OfflineBanner } from "@/components/offline-banner";
 import { PWARegister } from "@/components/sw-register";
+import { Particles } from "@/components/particles";
+import { CustomCursor } from "@/components/custom-cursor";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-plus-jakarta",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -32,7 +30,7 @@ export const metadata: Metadata = {
     siteName: "Pollflow",
     images: [
       {
-        url: "https://pollflow-theta.vercel.app/og-image.png", // specific image optimization not requested but good placeholder
+        url: "https://pollflow-theta.vercel.app/og-image.png",
         width: 1200,
         height: 630,
       },
@@ -53,7 +51,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#0f172a", // Deep navy
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -67,13 +65,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <PWARegister />
+      <body className={`${plusJakarta.variable} font-sans antialiased text-foreground overflow-x-hidden selection:bg-primary/30`}>
+        <CustomCursor />
+        <div className="fixed inset-0 z-[-1] animate-gradient-slow bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81]" />
+        <Particles />
+        <div className="relative z-10 min-h-screen">
+          {children}
+        </div>
         <OfflineBanner />
-        {children}
-        <Toaster />
+        <PWARegister />
+        <Toaster position="top-center" toastOptions={{
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: 'white',
+          }
+        }} />
       </body>
     </html>
   );

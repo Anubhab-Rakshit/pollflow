@@ -76,6 +76,9 @@ const config: Config = {
         'accordion-up': 'accordion-up 0.2s ease-out',
         blob: "blob 7s infinite",
       },
+      fontFamily: {
+        sans: ["var(--font-plus-jakarta)", "sans-serif"],
+      },
       keyframes: {
         blob: {
           "0%": {
