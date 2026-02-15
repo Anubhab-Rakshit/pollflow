@@ -277,6 +277,10 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
         >
           {poll.question}
         </h1>
+        <div className="text-[10px] text-foreground/30 font-mono bg-foreground/5 p-2 rounded mt-2 inline-block">
+          DEBUG: Status={status} | Now={new Date().toISOString()}<br />
+          Scheduled={poll.scheduled_for} | Expires={poll.expires_at}
+        </div>
       </div>
 
       {/* Skeleton / Voting / Results */}
