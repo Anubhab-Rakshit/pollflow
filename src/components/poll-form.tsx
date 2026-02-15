@@ -86,8 +86,8 @@ export function PollForm({ initialTemplate }: PollFormProps) {
           question,
           options: validOptions,
           fingerprint,
-          expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
-          scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+          scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : null,
         }),
       })
 
