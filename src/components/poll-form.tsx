@@ -93,7 +93,7 @@ export function PollForm({ initialTemplate }: PollFormProps) {
 
       if (!response.ok) throw new Error('Failed to create poll')
       const data = await response.json()
-      router.push(`/poll/${data.slug}`)
+      router.push(`/poll/${data.pollSlug}`)
     } catch (error) {
       toast.error('Something went wrong. Please try again.')
     } finally {
