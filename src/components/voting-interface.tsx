@@ -163,7 +163,7 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
   }))
 
   const handleOptionClick = useCallback((optionId: string, e: React.MouseEvent<HTMLDivElement>) => {
-    if (isVoting) return;
+    if (isVoting || status !== 'active') return;
 
     // Ripple effect
     const rect = e.currentTarget.getBoundingClientRect();
@@ -284,7 +284,7 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
                 } : {}}
                 transition={{ duration: 0.2 }}
                 className={`relative overflow-hidden cursor-pointer transition-all duration-200 w-full h-[72px] flex items-center justify-between px-6 rounded-xl
-                  ${isVoting && selectedOption !== option.id ? 'opacity-50 pointer-events-none' : ''}
+                  ${(isVoting && selectedOption !== option.id) || status !== 'active' ? 'opacity-50 pointer-events-none' : ''}
                   ${selectedOption === option.id
                     ? 'border-2 border-blue-500 bg-blue-500/5 shadow-[0_0_20px_rgba(59,130,246,0.1)]'
                     : 'border-[1.5px] border-foreground/[0.08] bg-foreground/[0.03] hover:border-foreground/[0.15]'
@@ -340,12 +340,12 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
             {/* Vote Button */}
             <motion.button
               onClick={handleVote}
-              disabled={!selectedOption || isVoting}
-              whileHover={selectedOption && !isVoting ? { y: -2, boxShadow: '0 12px 24px rgba(59, 130, 246, 0.25)' } : {}}
-              whileTap={selectedOption && !isVoting ? { scale: 0.98 } : {}}
+              disabled={!selectedOption || isVoting || status !== 'active'}
+              whileHover={selectedOption && !isVoting && status === 'active' ? { y: -2, boxShadow: '0 12px 24px rgba(59, 130, 246, 0.25)' } : {}}
+              whileTap={selectedOption && !isVoting && status === 'active' ? { scale: 0.98 } : {}}
               className="w-full h-14 flex items-center justify-center gap-2 text-white font-semibold rounded-xl mt-6 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-200"
               style={{
-                background: '#3b82f6',
+                background: status === 'active' ? '#3b82f6' : '#64748b',
                 fontSize: '1rem',
               }}
             >
@@ -354,8 +354,12 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Casting your vote...
                 </>
-              ) : (
+              ) : status === 'active' ? (
                 "Cast Your Vote"
+              ) : status === 'scheduled' ? (
+                `Starts in ${timeLeft}`
+              ) : (
+                "Poll Ended"
               )}
             </motion.button>
           </motion.div>
