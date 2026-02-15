@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Check, Loader2, Share2, Crown, Clock } from 'lucide-react'
+import { Check, Loader2, Share2, Crown, Clock, BarChart2 } from 'lucide-react'
+import Link from 'next/link'
 import Confetti from 'react-confetti'
 import { useWindowSize } from 'react-use'
 import CountUp from 'react-countup'
@@ -505,15 +506,23 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
               )
             })}
 
-            <div className="pt-8 flex justify-center">
+            <div className="pt-8 flex flex-col items-center gap-4">
               <motion.button
                 onClick={() => setIsShareOpen(true)}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.96 }}
                 className="flex items-center gap-2 px-6 py-3 rounded-full bg-transparent border border-foreground/15 text-foreground/80 text-sm font-medium hover:bg-foreground/5 hover:border-foreground/25 transition-all duration-200"
               >
-                <Share2 className="w-4 h-4" /> Share Results
+                <Share2 className="w-4 h-4" /> Share Poll
               </motion.button>
+
+              <Link
+                href={`/poll/${poll.slug}/analytics`}
+                className="flex items-center gap-2 text-xs text-foreground/40 hover:text-foreground/60 transition-colors"
+                prefetch={false}
+              >
+                <BarChart2 className="w-3 h-3" /> View Analytics
+              </Link>
             </div>
           </motion.div>
         )}
