@@ -185,7 +185,7 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
     if (!selectedOption || !fingerprint) return
     setIsVoting(true)
     try {
-      const response = await fetch(`/api/polls/${poll.id}/vote`, {
+      const response = await fetch(`/api/polls/${poll.slug}/vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ optionId: selectedOption, fingerprint }),
