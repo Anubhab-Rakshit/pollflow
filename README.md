@@ -1,5 +1,5 @@
 
-# 🌊 Pollflow Realtime
+# Pollflow Realtime
 
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-Database-green?style=for-the-badge&logo=supabase)
@@ -9,7 +9,7 @@
 
 **Pollflow** is a next-generation polling platform that delivers **instant, real-time feedback** without the friction of sign-ups. Designed for speed, engagement, and accessibility, it transforms how audiences interact during events, meetings, and streams.
 
-🌐 **Live Demo:** [pollflow.vercel.app](https://pollflow.vercel.app) (Replace with actual link if deployed)
+🌐 **Live Demo:** [pollflow.vercel.app](https://pollflow.vercel.app) 
 
 ---
 
@@ -102,6 +102,15 @@ Pollflow is designed to feel native on your phone.
 
 ---
 
+## 🔮 Future Roadmap & Scalability
+As Pollflow grows, we have planned a robust scaling strategy to handle high-concurrency viral events:
+1.  **Redis Caching**: To reduce database read load, we plan to cache aggregated vote counts in Redis or Edge Config, serving millions of reads without hitting the primary database.
+2.  **Message Queues (Kafka/Upstash)**: For massive write spikes, incoming votes will be buffered in a queue before asynchronous processing, ensuring 100% uptime even under heavy load.
+3.  **Read Replicas**: Distributing real-time subscription traffic across multiple Postgres read replicas to support millions of concurrent viewers.
+4.  **Edge Functions**: Moving validation logic global to reduce latency and server load for international users.
+
+---
+
 ## ☁️ Deployment
 
 Pollflow is optimized for **Vercel**.
@@ -121,4 +130,5 @@ Since we use **Supabase Realtime**, no separate WebSocket server is needed. Ever
 
 ---
 
-> Built with ❤️ by [Your Name/Team] for [Hackathon/Project Name]
+> Built with ❤️ by Anubhab Rakshit
+
