@@ -96,7 +96,7 @@ function SkeletonLoader({ count }: { count: number }) {
 }
 
 export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
-  const { poll, isConnected, presenceCount, activities } = useRealtimePoll(initialPoll);
+  const { poll, setPoll, isConnected, presenceCount, activities } = useRealtimePoll(initialPoll);
   const fingerprint = useFingerprint()
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [hasVoted, setHasVoted] = useState(false)
@@ -184,6 +184,16 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
   const handleVote = async () => {
     if (!selectedOption || !fingerprint) return
     setIsVoting(true)
+
+    // Optimistic update
+    const previousPoll = { ...poll };
+    setPoll(current => ({
+      ...current,
+      options: current.options.map(opt =>
+        opt.id === selectedOption ? { ...opt, vote_count: opt.vote_count + 1 } : opt
+      )
+    }));
+
     try {
       const response = await fetch(`/api/polls/${poll.slug}/vote`, {
         method: 'POST',
@@ -201,6 +211,8 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
       setTimeout(() => setShowConfetti(false), 3000);
       toast.success("Vote recorded!")
     } catch (error) {
+      // Revert optimistic update
+      setPoll(previousPoll);
       toast.error("Failed to vote")
     } finally {
       setIsVoting(false)
