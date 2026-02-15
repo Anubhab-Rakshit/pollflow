@@ -30,7 +30,7 @@ export async function GET(
         // 2. Get Options
         const { data: options, error: optionsError } = await supabase
             .from('poll_options')
-            .select('id, option_text, vote_count')
+            .select('id, option_text, vote_count, position, poll_id')
             .eq('poll_id', poll.id)
             .order('position', { ascending: true });
 
