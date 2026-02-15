@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 
 // Define strict types for our data
 interface PollOption {
@@ -35,6 +36,7 @@ export const useRealtimePoll = (initialPoll: Poll) => {
     const [presenceCount, setPresenceCount] = useState(0);
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [isConnected, setIsConnected] = useState(false);
+    const reconnectToastId = useRef<string | number | null>(null);
 
     useEffect(() => {
         if (!poll?.id) return;
@@ -43,7 +45,7 @@ export const useRealtimePoll = (initialPoll: Poll) => {
         const channel = supabase.channel(`poll:${poll.id}`, {
             config: {
                 presence: {
-                    key: Math.random().toString(36).substring(7), // Random user ID for anonymous presence
+                    key: Math.random().toString(36).substring(7),
                 },
             },
         });
@@ -98,33 +100,50 @@ export const useRealtimePoll = (initialPoll: Poll) => {
             // 3. Presence (Who is online)
             .on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState();
-                // Count total unique presence keys
                 const count = Object.keys(state).length;
                 setPresenceCount(count);
             })
             .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-                // Optional: Add "Someone joined" activity
-                // const newActivity: ActivityItem = {
-                //   id: Math.random().toString(36).substr(2, 9),
-                //   type: "join",
-                //   text: `New voter joined`,
-                //   timestamp: Date.now(),
-                //   color: "bg-green-500",
-                // };
-                // setActivities((prev) => [newActivity, ...prev].slice(0, 5));
+                // Optionally track joins
             })
             .subscribe((status) => {
-                setIsConnected(status === 'SUBSCRIBED');
                 if (status === 'SUBSCRIBED') {
-                    // Track presence for this user
+                    setIsConnected(true);
+                    // Dismiss reconnecting toast if present
+                    if (reconnectToastId.current) {
+                        toast.dismiss(reconnectToastId.current);
+                        toast.success('Connected ✓', {
+                            duration: 2000,
+                            style: {
+                                background: '#10b981',
+                                color: '#ffffff',
+                                border: 'none',
+                            },
+                        });
+                        reconnectToastId.current = null;
+                    }
                     channel.track({ online_at: new Date().toISOString() });
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    setIsConnected(false);
+                    if (!reconnectToastId.current) {
+                        reconnectToastId.current = toast.loading('Reconnecting...', {
+                            duration: Infinity,
+                            style: {
+                                background: '#f59e0b',
+                                color: '#ffffff',
+                                border: 'none',
+                            },
+                        });
+                    }
+                } else if (status === 'CLOSED') {
+                    setIsConnected(false);
                 }
             });
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [poll.id]); // Only re-run if poll ID changes (should be stable)
+    }, [poll.id]);
 
     return { poll, setPoll, isConnected, presenceCount, activities };
 };

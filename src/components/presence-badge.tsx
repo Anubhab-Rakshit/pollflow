@@ -1,23 +1,66 @@
-import { motion } from "framer-motion";
-import { Users } from "lucide-react";
+'use client'
+
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState, useRef } from "react";
 
 interface PresenceBadgeProps {
     count: number;
 }
 
 export function PresenceBadge({ count }: PresenceBadgeProps) {
+    const [prevCount, setPrevCount] = useState(count);
+    const [flash, setFlash] = useState(false);
+
+    useEffect(() => {
+        if (count !== prevCount) {
+            setFlash(true);
+            const timer = setTimeout(() => {
+                setFlash(false);
+                setPrevCount(count);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [count, prevCount]);
+
     return (
-        <div className="flex items-center gap-2 px-3 py-1 bg-white/50 backdrop-blur-sm dark:bg-black/50 rounded-full border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="flex items-center gap-2.5">
+            {/* Pulsing green dot */}
             <div className="relative flex h-2.5 w-2.5">
                 <motion.span
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.7, 0, 0.7] }}
+                    animate={{
+                        scale: [1, 1.4, 1],
+                        opacity: [0.6, 0, 0.6],
+                    }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+                    className="absolute inline-flex h-full w-full rounded-full bg-green-400"
                 />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+                <motion.span
+                    animate={{
+                        scale: [1, 1.1, 1],
+                        opacity: [0.6, 1, 0.6],
+                    }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"
+                />
             </div>
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                {count} {count === 1 ? 'person' : 'people'} here
+
+            {/* Animated count */}
+            <span className="text-xs font-medium text-foreground/60 flex items-center gap-1">
+                <AnimatePresence mode="wait">
+                    <motion.span
+                        key={count}
+                        initial={{ scale: 1, color: 'inherit' }}
+                        animate={{
+                            scale: flash ? [1, 1.2, 1] : 1,
+                            color: flash ? ['inherit', '#3b82f6', 'inherit'] : 'inherit',
+                        }}
+                        transition={{ duration: 0.3 }}
+                        className="inline-block tabular-nums font-semibold"
+                    >
+                        {count}
+                    </motion.span>
+                </AnimatePresence>
+                {count === 1 ? 'person' : 'people'} here
             </span>
         </div>
     );

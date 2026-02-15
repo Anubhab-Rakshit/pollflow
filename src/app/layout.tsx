@@ -1,16 +1,24 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google"; // Mixed typography for premium feel
 import "./globals.css";
 
 import { Toaster } from "react-hot-toast";
 import { OfflineBanner } from "@/components/offline-banner";
 import { PWARegister } from "@/components/sw-register";
-import { Particles } from "@/components/particles";
+import MeshBackground from "@/components/mesh-background";
 import { CustomCursor } from "@/components/custom-cursor";
+import { ThemeTransition } from "@/components/theme-transition";
+import { ThemeProvider } from "@/components/theme-provider";
 
-const plusJakarta = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-plus-jakarta",
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
   display: "swap",
 });
 
@@ -64,24 +72,31 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${plusJakarta.variable} font-sans antialiased text-foreground overflow-x-hidden selection:bg-primary/30`}>
-        <CustomCursor />
-        <div className="fixed inset-0 z-[-1] animate-gradient-slow bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#312e81]" />
-        <Particles />
-        <div className="relative z-10 min-h-screen">
-          {children}
-        </div>
-        <OfflineBanner />
-        <PWARegister />
-        <Toaster position="top-center" toastOptions={{
-          style: {
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            color: 'white',
-          }
-        }} />
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} ${playfair.variable} font-sans antialiased text-foreground bg-background overflow-x-hidden selection:bg-white/30`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <CustomCursor />
+          <ThemeTransition />
+          <MeshBackground />
+          <div className="relative z-10 min-h-screen">
+            {children}
+          </div>
+          <OfflineBanner />
+          <PWARegister />
+          <Toaster position="top-center" toastOptions={{
+            style: {
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: 'white',
+            }
+          }} />
+        </ThemeProvider>
       </body>
     </html>
   );
