@@ -52,10 +52,7 @@ export const metadata: Metadata = {
     description: "Instant real-time polls for everyone.",
     creator: "@pollflow",
   },
-  icons: {
-    icon: "/icon.png",
-    apple: "/apple-icon.png",
-  },
+
 };
 
 export const viewport: Viewport = {
