@@ -79,16 +79,22 @@ export function PollForm({ initialTemplate }: PollFormProps) {
 
     setIsLoading(true)
     try {
+      const payload = {
+        question,
+        options: validOptions,
+        fingerprint,
+        // Sending both formats to be absolutely sure Zod picks it up
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : null,
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        scheduled_for: scheduledFor ? new Date(scheduledFor).toISOString() : null,
+      };
+      console.log("Submitting payload:", payload);
+
       const response = await fetch('/api/polls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question,
-          options: validOptions,
-          fingerprint,
-          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
-          scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : null,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) throw new Error('Failed to create poll')
@@ -205,6 +211,10 @@ export function PollForm({ initialTemplate }: PollFormProps) {
             {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             Advanced Settings
           </button>
+
+          <div className="text-[10px] text-foreground/30 font-mono mt-1 ml-2">
+            State: Sche={scheduledFor || 'None'} | Exp={expiresAt || 'None'}
+          </div>
 
           <AnimatePresence>
             {showAdvanced && (
