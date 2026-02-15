@@ -103,7 +103,15 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
   const [isVoting, setIsVoting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [timeLeft, setTimeLeft] = useState<string>("");
-  const [status, setStatus] = useState<'active' | 'ended' | 'scheduled'>('active');
+  const [status, setStatus] = useState<'active' | 'ended' | 'scheduled'>(() => {
+    // Calculate status immediately (safe on server if dates are ISO)
+    const now = new Date();
+    const expires = initialPoll.expires_at ? new Date(initialPoll.expires_at) : null;
+    const scheduled = initialPoll.scheduled_for ? new Date(initialPoll.scheduled_for) : null;
+    if (scheduled && scheduled > now) return 'scheduled';
+    if (expires && expires <= now) return 'ended';
+    return 'active';
+  });
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [ripples, setRipples] = useState<{ id: number; x: number; y: number; optId: string }[]>([]);
@@ -131,19 +139,38 @@ export function VotingInterface({ initialPoll }: VotingInterfaceProps) {
 
       if (scheduled && scheduled > now) {
         setStatus('scheduled');
+        const diff = scheduled.getTime() - now.getTime();
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        const parts = [];
+        if (days > 0) parts.push(`${days}d`);
+        if (hours > 0) parts.push(`${hours}h`);
+        if (minutes > 0) parts.push(`${minutes}m`);
+        if (seconds > 0) parts.push(`${seconds}s`);
+
+        setTimeLeft(parts.join(' ') || "0s");
       } else if (expires) {
         if (expires <= now) {
           setStatus('ended');
           setTimeLeft("Poll Ended");
         } else {
           setStatus('active');
+          const diff = expires.getTime() - now.getTime();
+          // Optional: Show count down for ending too? User didn't ask.
+          setTimeLeft("");
         }
       } else {
         setStatus('active');
         setTimeLeft("");
       }
     };
+
     calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
   }, [poll.expires_at, poll.scheduled_for]);
 
   useEffect(() => {
